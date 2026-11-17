@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.rebs.hrms.rebs_hrms"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
