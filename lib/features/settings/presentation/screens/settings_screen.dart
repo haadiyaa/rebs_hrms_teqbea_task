@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/data_providers.dart';
-import '../../../../core/services/location_simulator.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../widgets/location_simulator_card.dart';
 import '../../../attendance/presentation/providers/attendance_notifier.dart';
 import '../../../employee/presentation/providers/employee_notifier.dart';
 import '../../../leave/presentation/providers/leave_notifier.dart';
@@ -22,8 +22,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late final TextEditingController _urlController;
-  late final TextEditingController _customLatController;
-  late final TextEditingController _customLngController;
   bool _isTestingConnection = false;
   String? _testResult;
   bool _testSuccess = false;
@@ -33,15 +31,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.initState();
     final config = ref.read(appConfigProvider);
     _urlController = TextEditingController(text: config.apiBaseUrl);
-    _customLatController = TextEditingController(text: config.officeLatitude.toString());
-    _customLngController = TextEditingController(text: config.officeLongitude.toString());
   }
 
   @override
   void dispose() {
     _urlController.dispose();
-    _customLatController.dispose();
-    _customLngController.dispose();
     super.dispose();
   }
 
@@ -224,7 +218,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final appConfig = ref.watch(appConfigProvider);
     final syncState = ref.watch(syncNotifierProvider);
-    final simulatorState = ref.watch(locationSimulatorProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -415,176 +408,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           // Section 2.5: GPS Location Simulator (Debug Testing Only)
           if (kDebugMode) ...[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.gps_fixed, color: Color(0xFF7C3AED)),
-                            SizedBox(width: 8),
-                            Text(
-                              'GPS Location Simulator',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        Switch(
-                          value: simulatorState.isEnabled,
-                          onChanged: (val) {
-                            ref.read(locationSimulatorProvider.notifier).toggle(
-                                  val,
-                                  officeLat: appConfig.officeLatitude,
-                                  officeLng: appConfig.officeLongitude,
-                                );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Simulate device coordinates for testing 200m geofence on emulators without GPS spoofing tools.',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                    ),
-                    if (simulatorState.isEnabled) ...[
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Reviewer Simulation Presets:',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('At Office (0m) [✅ Allow]'),
-                            selected: simulatorState.activePreset == LocationSimulatorPreset.office0m,
-                            onSelected: (_) {
-                              ref.read(locationSimulatorProvider.notifier).setPreset(
-                                    LocationSimulatorPreset.office0m,
-                                    officeLat: appConfig.officeLatitude,
-                                    officeLng: appConfig.officeLongitude,
-                                  );
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('Inside (~150m) [✅ Allow]'),
-                            selected: simulatorState.activePreset == LocationSimulatorPreset.inside150m,
-                            onSelected: (_) {
-                              ref.read(locationSimulatorProvider.notifier).setPreset(
-                                    LocationSimulatorPreset.inside150m,
-                                    officeLat: appConfig.officeLatitude,
-                                    officeLng: appConfig.officeLongitude,
-                                  );
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('Exact (200m) [✅ Allow]'),
-                            selected: simulatorState.activePreset == LocationSimulatorPreset.boundary200m,
-                            onSelected: (_) {
-                              ref.read(locationSimulatorProvider.notifier).setPreset(
-                                    LocationSimulatorPreset.boundary200m,
-                                    officeLat: appConfig.officeLatitude,
-                                    officeLng: appConfig.officeLongitude,
-                                  );
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('Outside (~280m) [❌ Reject]'),
-                            selected: simulatorState.activePreset == LocationSimulatorPreset.outside280m,
-                            onSelected: (_) {
-                              ref.read(locationSimulatorProvider.notifier).setPreset(
-                                    LocationSimulatorPreset.outside280m,
-                                    officeLat: appConfig.officeLatitude,
-                                    officeLng: appConfig.officeLongitude,
-                                  );
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: (simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters
-                              ? AppTheme.statusSuccess.withValues(alpha: 0.1)
-                              : AppTheme.statusRejected.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              (simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters
-                                  ? Icons.check_circle
-                                  : Icons.cancel,
-                              color: (simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters
-                                  ? AppTheme.statusSuccess
-                                  : AppTheme.statusRejected,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Distance: ~${(simulatorState.calculatedDistanceMeters ?? 0).toStringAsFixed(1)}m from office (${(simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters ? "Inside 200m - Permitted" : "Outside 200m - Rejected"})',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: (simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters
-                                      ? AppTheme.statusSuccess
-                                      : AppTheme.statusRejected,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _customLatController,
-                              decoration: const InputDecoration(labelText: 'Custom Lat'),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _customLngController,
-                              decoration: const InputDecoration(labelText: 'Custom Lng'),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              final lat = double.tryParse(_customLatController.text.trim());
-                              final lng = double.tryParse(_customLngController.text.trim());
-                              if (lat != null && lng != null) {
-                                ref.read(locationSimulatorProvider.notifier).setCustomLocation(
-                                      lat,
-                                      lng,
-                                      officeLat: appConfig.officeLatitude,
-                                      officeLng: appConfig.officeLongitude,
-                                    );
-                              }
-                            },
-                            child: const Text('Apply'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
+            LocationSimulatorCard(appConfig: appConfig),
             const SizedBox(height: 16),
           ],
 
