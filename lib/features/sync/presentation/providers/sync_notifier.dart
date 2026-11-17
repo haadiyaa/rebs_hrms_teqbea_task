@@ -54,6 +54,9 @@ class SyncNotifier extends Notifier<SyncState> {
     state = state.copyWith(pendingCount: count);
   }
 
+  /// Convenience method to force trigger manual sync.
+  Future<SyncResult> syncNow() => triggerSync(trigger: 'manual');
+
   /// Triggers a synchronization run.
   Future<SyncResult> triggerSync({String trigger = 'manual'}) async {
     if (state.isSyncing) {

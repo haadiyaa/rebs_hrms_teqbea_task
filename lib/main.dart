@@ -4,6 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/providers/core_providers.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/clock.dart';
+import 'features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'features/leave/presentation/screens/leave_screen.dart';
+import 'features/settings/presentation/screens/settings_screen.dart';
+import 'features/sync/presentation/providers/sync_notifier.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,43 +28,85 @@ Future<void> main() async {
   );
 }
 
-class RebsHrmsApp extends ConsumerWidget {
+class RebsHrmsApp extends StatelessWidget {
   const RebsHrmsApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final appConfig = ref.watch(appConfigProvider);
-
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'REBS HRMS',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('REBS HRMS'),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.business_center, size: 64, color: AppTheme.primaryBlue),
-                const SizedBox(height: 16),
-                const Text(
-                  'REBS HRMS Workspace',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Connected to: ${appConfig.apiBaseUrl}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppTheme.textMuted),
-                ),
-              ],
-            ),
+      home: const AppShell(),
+    );
+  }
+}
+
+/// Root application shell providing bottom navigation across
+/// Dashboard, Leaves, and Settings tabs with IndexedStack state preservation.
+class AppShell extends ConsumerStatefulWidget {
+  const AppShell({super.key});
+
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  int _selectedIndex = 0;
+
+  void _onDestinationSelected(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final syncState = ref.watch(syncNotifierProvider);
+
+    final screens = [
+      DashboardScreen(
+        onNavigateToLeave: () => _onDestinationSelected(1),
+      ),
+      const LeaveScreen(),
+      const SettingsScreen(),
+    ];
+
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: screens,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onDestinationSelected,
+        destinations: [
+          NavigationDestination(
+            icon: syncState.pendingCount > 0
+                ? Badge(
+                    label: Text('${syncState.pendingCount}'),
+                    child: const Icon(Icons.dashboard_outlined),
+                  )
+                : const Icon(Icons.dashboard_outlined),
+            selectedIcon: syncState.pendingCount > 0
+                ? Badge(
+                    label: Text('${syncState.pendingCount}'),
+                    child: const Icon(Icons.dashboard),
+                  )
+                : const Icon(Icons.dashboard),
+            label: 'Dashboard',
           ),
-        ),
+          const NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Leaves',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }

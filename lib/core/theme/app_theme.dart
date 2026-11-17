@@ -12,6 +12,7 @@ abstract final class AppTheme {
   static const Color statusSuccess = Color(0xFF16A34A);
   static const Color statusPending = Color(0xFFD97706);
   static const Color statusRejected = Color(0xFFDC2626);
+  static const Color statusError = statusRejected;
 
   static ThemeData get lightTheme {
     return ThemeData(
