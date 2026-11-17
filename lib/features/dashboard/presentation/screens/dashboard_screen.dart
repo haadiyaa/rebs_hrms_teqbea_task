@@ -9,6 +9,7 @@ import '../../../employee/presentation/widgets/employee_profile_card.dart';
 import '../../../leave/presentation/providers/leave_notifier.dart';
 import '../../../leave/presentation/widgets/leave_balance_card.dart';
 import '../../../sync/presentation/widgets/pending_sync_banner.dart';
+import '../../../attendance/presentation/widgets/location_simulator_banner.dart';
 
 /// Central Employee Dashboard uniting Employee profile, Today's attendance session,
 /// Live Duration, Quick Leave Balance, and Recent History with pull-to-refresh.
@@ -80,6 +81,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               // Offline Sync Banner (visible when pending count > 0)
               const PendingSyncBanner(),
+
+              // Debug Location Simulator Banner (visible in debug builds when enabled)
+              const LocationSimulatorBanner(),
 
               // Employee Profile Summary Card
               EmployeeProfileCard(

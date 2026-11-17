@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/errors/app_error.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/attendance_notifier.dart';
 import 'attendance_status_badge.dart';
@@ -128,7 +129,7 @@ class TodayAttendanceCard extends ConsumerWidget {
               ),
             ),
 
-            // Message Banner (Feedback / Outside Geofence / Offline Status)
+            // Message Banner (Feedback / Outside Geofence / Offline Status / Permission)
             if (state.userMessage != null) ...[
               const SizedBox(height: 14),
               Container(
@@ -144,32 +145,58 @@ class TodayAttendanceCard extends ConsumerWidget {
                         : const Color(0xFFBFDBFE),
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      state.error != null ? Icons.warning_amber_rounded : Icons.info_outline,
-                      color: state.error != null ? AppTheme.statusRejected : AppTheme.primaryLight,
-                      size: 20,
+                    Row(
+                      children: [
+                        Icon(
+                          state.error != null ? Icons.warning_amber_rounded : Icons.info_outline,
+                          color: state.error != null ? AppTheme.statusRejected : AppTheme.primaryLight,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            state.userMessage!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: state.error != null
+                                  ? AppTheme.statusRejected
+                                  : AppTheme.primaryBlue,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: notifier.dismissUserMessage,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        state.userMessage!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: state.error != null
-                              ? AppTheme.statusRejected
-                              : AppTheme.primaryBlue,
-                          fontWeight: FontWeight.w500,
+                    if (state.error is LocationError &&
+                        (state.error as LocationError).kind == LocationErrorKind.permissionPermanentlyDenied) ...[
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () => notifier.openAppSettings(),
+                          icon: const Icon(Icons.settings, size: 14),
+                          label: const Text(
+                            'Open App Settings',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTheme.statusRejected,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 16),
-                      onPressed: notifier.dismissUserMessage,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
+                    ],
                   ],
                 ),
               ),

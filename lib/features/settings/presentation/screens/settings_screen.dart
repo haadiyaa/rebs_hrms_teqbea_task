@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/config/app_config.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/data_providers.dart';
+import '../../../../core/services/location_simulator.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../attendance/presentation/providers/attendance_notifier.dart';
 import '../../../employee/presentation/providers/employee_notifier.dart';
@@ -19,6 +22,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late final TextEditingController _urlController;
+  late final TextEditingController _customLatController;
+  late final TextEditingController _customLngController;
   bool _isTestingConnection = false;
   String? _testResult;
   bool _testSuccess = false;
@@ -28,11 +33,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.initState();
     final config = ref.read(appConfigProvider);
     _urlController = TextEditingController(text: config.apiBaseUrl);
+    _customLatController = TextEditingController(text: config.officeLatitude.toString());
+    _customLngController = TextEditingController(text: config.officeLongitude.toString());
   }
 
   @override
   void dispose() {
     _urlController.dispose();
+    _customLatController.dispose();
+    _customLngController.dispose();
     super.dispose();
   }
 
@@ -128,10 +137,94 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _showEditOfficeDialog(BuildContext context, AppConfig appConfig) async {
+    final latController = TextEditingController(text: appConfig.officeLatitude.toString());
+    final lngController = TextEditingController(text: appConfig.officeLongitude.toString());
+    final radiusController = TextEditingController(text: appConfig.officeRadiusMeters.toInt().toString());
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Configure Office Geofence'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: latController,
+                decoration: const InputDecoration(labelText: 'Office Latitude'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: lngController,
+                decoration: const InputDecoration(labelText: 'Office Longitude'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: radiusController,
+                decoration: const InputDecoration(labelText: 'Radius (meters)'),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newLat = double.tryParse(latController.text.trim());
+              final newLng = double.tryParse(lngController.text.trim());
+              final newRadius = double.tryParse(radiusController.text.trim());
+
+              if (newLat != null && newLng != null && newRadius != null) {
+                // Update local app config
+                ref.read(appConfigProvider.notifier).updateOfficeGeofence(
+                      latitude: newLat,
+                      longitude: newLng,
+                      radiusMeters: newRadius,
+                    );
+
+                // Update backend mock server if reachable
+                try {
+                  final client = ref.read(apiClientProvider);
+                  await client.post('/__admin/office', body: {
+                    'latitude': newLat,
+                    'longitude': newLng,
+                    'radiusMeters': newRadius,
+                  });
+                } catch (_) {}
+
+                // Refresh employee profile
+                await ref.read(employeeNotifierProvider.notifier).loadEmployee(forceRefresh: true);
+
+                if (mounted && ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Office location updated: ($newLat, $newLng) ${newRadius.toInt()}m'),
+                      backgroundColor: AppTheme.statusSuccess,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Save & Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appConfig = ref.watch(appConfigProvider);
     final syncState = ref.watch(syncNotifierProvider);
+    final simulatorState = ref.watch(locationSimulatorProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -320,6 +413,181 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
 
+          // Section 2.5: GPS Location Simulator (Debug Testing Only)
+          if (kDebugMode) ...[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.gps_fixed, color: Color(0xFF7C3AED)),
+                            SizedBox(width: 8),
+                            Text(
+                              'GPS Location Simulator',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        Switch(
+                          value: simulatorState.isEnabled,
+                          onChanged: (val) {
+                            ref.read(locationSimulatorProvider.notifier).toggle(
+                                  val,
+                                  officeLat: appConfig.officeLatitude,
+                                  officeLng: appConfig.officeLongitude,
+                                );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Simulate device coordinates for testing 200m geofence on emulators without GPS spoofing tools.',
+                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    ),
+                    if (simulatorState.isEnabled) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Reviewer Simulation Presets:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('At Office (0m) [✅ Allow]'),
+                            selected: simulatorState.activePreset == LocationSimulatorPreset.office0m,
+                            onSelected: (_) {
+                              ref.read(locationSimulatorProvider.notifier).setPreset(
+                                    LocationSimulatorPreset.office0m,
+                                    officeLat: appConfig.officeLatitude,
+                                    officeLng: appConfig.officeLongitude,
+                                  );
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Inside (~150m) [✅ Allow]'),
+                            selected: simulatorState.activePreset == LocationSimulatorPreset.inside150m,
+                            onSelected: (_) {
+                              ref.read(locationSimulatorProvider.notifier).setPreset(
+                                    LocationSimulatorPreset.inside150m,
+                                    officeLat: appConfig.officeLatitude,
+                                    officeLng: appConfig.officeLongitude,
+                                  );
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Exact (200m) [✅ Allow]'),
+                            selected: simulatorState.activePreset == LocationSimulatorPreset.boundary200m,
+                            onSelected: (_) {
+                              ref.read(locationSimulatorProvider.notifier).setPreset(
+                                    LocationSimulatorPreset.boundary200m,
+                                    officeLat: appConfig.officeLatitude,
+                                    officeLng: appConfig.officeLongitude,
+                                  );
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Outside (~280m) [❌ Reject]'),
+                            selected: simulatorState.activePreset == LocationSimulatorPreset.outside280m,
+                            onSelected: (_) {
+                              ref.read(locationSimulatorProvider.notifier).setPreset(
+                                    LocationSimulatorPreset.outside280m,
+                                    officeLat: appConfig.officeLatitude,
+                                    officeLng: appConfig.officeLongitude,
+                                  );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters
+                              ? AppTheme.statusSuccess.withValues(alpha: 0.1)
+                              : AppTheme.statusRejected.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              (simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters
+                                  ? Icons.check_circle
+                                  : Icons.cancel,
+                              color: (simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters
+                                  ? AppTheme.statusSuccess
+                                  : AppTheme.statusRejected,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Distance: ~${(simulatorState.calculatedDistanceMeters ?? 0).toStringAsFixed(1)}m from office (${(simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters ? "Inside 200m - Permitted" : "Outside 200m - Rejected"})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: (simulatorState.calculatedDistanceMeters ?? 0) <= appConfig.officeRadiusMeters
+                                      ? AppTheme.statusSuccess
+                                      : AppTheme.statusRejected,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _customLatController,
+                              decoration: const InputDecoration(labelText: 'Custom Lat'),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _customLngController,
+                              decoration: const InputDecoration(labelText: 'Custom Lng'),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              final lat = double.tryParse(_customLatController.text.trim());
+                              final lng = double.tryParse(_customLngController.text.trim());
+                              if (lat != null && lng != null) {
+                                ref.read(locationSimulatorProvider.notifier).setCustomLocation(
+                                      lat,
+                                      lng,
+                                      officeLat: appConfig.officeLatitude,
+                                      officeLng: appConfig.officeLongitude,
+                                    );
+                              }
+                            },
+                            child: const Text('Apply'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           // Section 3: Geofence & Office Policy Information
           Card(
             child: Padding(
@@ -327,13 +595,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(Icons.location_on_outlined, color: AppTheme.primaryBlue),
-                      SizedBox(width: 8),
-                      Text(
-                        'Office Geofence & Policies',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      const Row(
+                        children: [
+                          Icon(Icons.location_on_outlined, color: AppTheme.primaryBlue),
+                          SizedBox(width: 8),
+                          Text(
+                            'Office Geofence & Policies',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _showEditOfficeDialog(context, appConfig),
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Edit'),
                       ),
                     ],
                   ),

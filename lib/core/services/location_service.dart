@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import '../config/app_config.dart';
 import '../errors/app_error.dart';
 import '../result/result.dart';
+import 'location_simulator.dart';
 
 /// GPS Coordinates holder.
 class LocationCoordinates {
@@ -24,16 +26,42 @@ abstract interface class LocationService {
   Future<bool> openAppSettings();
 }
 
-/// Production LocationService wrapping geolocator with permission handling
-/// and optional --dart-define MOCK_LAT / MOCK_LNG simulation overrides.
+/// Production LocationService wrapping geolocator with permission handling,
+/// debug location simulation, and optional --dart-define MOCK_LAT / MOCK_LNG overrides.
 class GeolocatorLocationService implements LocationService {
   final AppConfig appConfig;
+  final LocationSimulatorState? simulatorState;
 
-  GeolocatorLocationService({required this.appConfig});
+  GeolocatorLocationService({
+    required this.appConfig,
+    this.simulatorState,
+  });
+
+  /// Indicates whether the location simulator is actively overriding coordinates.
+  bool get isUsingSimulatedLocation =>
+      kDebugMode &&
+      simulatorState != null &&
+      simulatorState!.isEnabled &&
+      simulatorState!.simulatedLatitude != null &&
+      simulatorState!.simulatedLongitude != null;
 
   @override
   Future<Result<LocationCoordinates>> getCurrentPosition() async {
-    // 1. Developer / Reviewer simulation override via MOCK_LAT and MOCK_LNG
+    // 1. Debug-only location simulator check (Active ONLY in debug mode)
+    if (kDebugMode &&
+        simulatorState != null &&
+        simulatorState!.isEnabled &&
+        simulatorState!.simulatedLatitude != null &&
+        simulatorState!.simulatedLongitude != null) {
+      return Success(
+        LocationCoordinates(
+          latitude: simulatorState!.simulatedLatitude!,
+          longitude: simulatorState!.simulatedLongitude!,
+        ),
+      );
+    }
+
+    // 2. Developer / Reviewer simulation override via compile-time MOCK_LAT and MOCK_LNG
     if (appConfig.mockLatitude != null && appConfig.mockLongitude != null) {
       return Success(
         LocationCoordinates(

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/data_providers.dart';
 import '../../domain/entities/employee.dart';
 import '../../domain/repositories/employee_repository.dart';
@@ -49,8 +50,18 @@ class EmployeeNotifier extends Notifier<EmployeeState> {
     final result = await _repository.getEmployeeProfile(forceRefresh: forceRefresh);
 
     if (result.isSuccess) {
+      final emp = result.dataOrNull;
+      if (emp != null) {
+        // Dynamically configure office coordinates and radius from API
+        ref.read(appConfigProvider.notifier).updateOfficeGeofence(
+              latitude: emp.officeLocation.latitude,
+              longitude: emp.officeLocation.longitude,
+              radiusMeters: emp.officeLocation.radiusMeters,
+              timezone: emp.timezone,
+            );
+      }
       state = state.copyWith(
-        employee: result.dataOrNull,
+        employee: emp,
         isLoading: false,
       );
     } else {

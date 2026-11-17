@@ -11,12 +11,17 @@ import '../../domain/entities/attendance_record.dart';
 import '../../domain/entities/attendance_status.dart';
 import '../../domain/repositories/attendance_repository.dart';
 import '../../domain/usecases/attendance_rules.dart';
+import '../../../../core/services/location_simulator.dart';
 import 'attendance_state.dart';
 
 /// Provider for the LocationService instance.
 final locationServiceProvider = Provider<LocationService>((ref) {
   final config = ref.watch(appConfigProvider);
-  return GeolocatorLocationService(appConfig: config);
+  final simulator = ref.watch(locationSimulatorProvider);
+  return GeolocatorLocationService(
+    appConfig: config,
+    simulatorState: simulator,
+  );
 });
 
 /// Riverpod Notifier managing attendance check-in/out and dashboard attendance state.

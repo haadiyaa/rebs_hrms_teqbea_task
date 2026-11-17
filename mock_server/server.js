@@ -18,9 +18,9 @@ app.use((req, res, next) => {
 // CONFIGURATION & SEED DATA
 // ==========================================
 const DEFAULT_OFFICE = {
-  latitude: 12.971598,
-  longitude: 77.594562,
-  radiusMeters: 200.0,
+  latitude: parseFloat(process.env.OFFICE_LAT) || 12.971598,
+  longitude: parseFloat(process.env.OFFICE_LNG) || 77.594562,
+  radiusMeters: parseFloat(process.env.OFFICE_RADIUS) || 200.0,
 };
 
 const COMPANY_TIMEZONE = 'Asia/Kolkata';
@@ -241,7 +241,7 @@ app.get('/__admin/scenario', (req, res) => {
 });
 
 app.post('/__admin/scenario', (req, res) => {
-  const { name } = req.body;
+  const name = req.body.scenario || req.body.name;
   const validScenarios = [
     'success',
     'slow',
@@ -299,6 +299,20 @@ app.post('/__admin/reset', (req, res) => {
 
   console.log('[Admin] Server state reset to default seeds.');
   res.json({ message: 'State successfully reset to factory defaults.' });
+});
+
+// Admin endpoint to dynamically reconfigure office location coordinates
+app.post('/__admin/office', (req, res) => {
+  const { latitude, longitude, radiusMeters } = req.body;
+  if (latitude !== undefined) state.employee.officeLocation.latitude = parseFloat(latitude);
+  if (longitude !== undefined) state.employee.officeLocation.longitude = parseFloat(longitude);
+  if (radiusMeters !== undefined) state.employee.officeLocation.radiusMeters = parseFloat(radiusMeters);
+
+  console.log(`[Admin] Office location updated: (${state.employee.officeLocation.latitude}, ${state.employee.officeLocation.longitude}) radius: ${state.employee.officeLocation.radiusMeters}m`);
+  res.json({
+    message: 'Office location coordinates updated successfully.',
+    officeLocation: state.employee.officeLocation,
+  });
 });
 
 app.get('/__admin/state', (req, res) => {

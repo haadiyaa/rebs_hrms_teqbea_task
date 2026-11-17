@@ -206,33 +206,40 @@ If testing via **ngrok** (e.g., exposing the mock server to an external network 
 
 ---
 
-## Location Simulation Guide
+## Location Simulation & Configurable Office Guide
 
-The office geofence is defined at:
-- **Latitude**: `12.971598`
-- **Longitude**: `77.594562`
-- **Radius**: `200 meters`
+### 1. In-App Reviewer Location Simulator (Recommended for Reviewers)
+To test geofencing on Android emulators or physical devices without external spoofing tools, the application includes an injectable **Location Simulator** (strictly enabled in `kDebugMode`):
 
-### 1. Android Emulator Simulation
-1. Click the **...** (Extended Controls) icon on the emulator sidebar.
-2. Navigate to **Location**.
-3. Set coordinates:
-   - **Inside Geofence**: Latitude `12.971598`, Longitude `77.594562` (Tap **Send**)
-   - **Outside Geofence**: Latitude `12.980000`, Longitude `77.600000` (Tap **Send**)
-4. Alternatively, use ADB:
-   ```bash
-   adb emu geo fix 77.594562 12.971598
-   ```
+1. Launch the app and tap the **Settings** tab.
+2. Scroll to the **GPS Location Simulator** section and toggle the switch **ON**.
+3. Select any of the reviewer presets:
+   - **At Office (0m)**: Coordinates match office center (`12.971598, 77.594562`). Attendance permitted.
+   - **Inside Geofence (~150m)**: Computes coordinates using spherical geodesy ($\Delta \text{lat} = \frac{150}{R} \times \frac{180}{\pi}$). Attendance permitted.
+   - **Exact Boundary (200m)**: Computes coordinates exactly at the 200.0m boundary line. Attendance permitted.
+   - **Outside Geofence (~280m)**: Computes coordinates ~280m north of office. Attendance rejected with clear error message.
+   - **Custom Coordinates**: Allows arbitrary latitude and longitude input.
+4. When active, a purple banner appears on the **Dashboard** displaying the simulated preset, distance to office, and a one-tap `Real GPS` revert button.
 
-### 2. iOS Simulator Simulation
-1. In Simulator menu: **Features** > **Location** > **Custom Location...**
-2. Enter `12.971598` (Lat) and `77.594562` (Lng).
+### 2. Configurable Office Coordinates
+The office coordinates and radius are dynamically loaded from the backend API:
+- Loaded at runtime from `GET /employee/me` and stored in Riverpod `AppConfig`.
+- Configurable via the mock server environment (`OFFICE_LAT`, `OFFICE_LNG`, `OFFICE_RADIUS`).
+- Configurable at runtime via `POST /__admin/office` or by tapping the **Edit** button in the **Office Geofence & Policies** card on the Settings screen.
+- Zero hardcoded coordinates in presentation widgets or business logic.
 
-### 3. Compile-Time Simulation Override
-You can also launch the app with fixed mock coordinates:
-```bash
-flutter run --dart-define=MOCK_LAT=12.971598 --dart-define=MOCK_LNG=77.594562
-```
+### 3. Production Security & Server-Side Validations
+> [!IMPORTANT]
+> The debug location simulator is strictly compiled out in release builds via `kDebugMode` checks. In a production HRMS deployment:
+> 1. **Server-Side Geofencing**: The backend server must recalculate the Haversine distance between the submitted event coordinates and the active office location. A client check is purely for UX feedback; the server is the source of truth.
+> 2. **Mock Location Detection**: On Android (`Location.isFromMockProvider()` / `Location.isMock()`) and iOS, the app must inspect mock location flags and reject spoofed coordinates.
+> 3. **Device Attestation**: Production apps must verify app integrity using **Google Play Integrity API** or **Apple DeviceCheck / App Attest** to prevent tampered APKs.
+> 4. **Network & Wi-Fi Corroboration**: Validate corporate Wi-Fi BSSID or enterprise VPN IP alongside GPS telemetry to deter GPS emulation.
+
+### 4. External Location Simulation Options
+- **Android Emulator Extended Controls**: `...` > **Location** > Send `12.971598, 77.594562`.
+- **ADB Command**: `adb emu geo fix 77.594562 12.971598`
+- **Compile-time flags**: `flutter run --dart-define=MOCK_LAT=12.971598 --dart-define=MOCK_LNG=77.594562`
 
 ---
 
