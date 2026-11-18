@@ -1,10 +1,32 @@
-# REBS HRMS — Mobile Application Assessment
+# REBS HRMS — Mobile Engineering Assessment
 
-A production-ready, offline-capable mobile HRMS application built with **Flutter 3**, **Riverpod**, and **Clean Architecture** (Feature-First) for the Teqbae Innovations and Solutions technical assessment.
+A robust, offline-first mobile HRMS application built with **Flutter 3**, **Riverpod**, and **Clean Architecture** for the Teqbae Innovations and Solutions technical assessment.
 
 ---
 
-## Quick Start (Run in 2 Minutes)
+## 🏗️ Architecture
+
+The codebase follows a **Feature-First Clean Architecture** with strict unidirectional data flow:
+
+```
+lib/
+├── core/                  # Infrastructure (ApiClient, AppConfig, SQLite, Clock)
+└── features/
+    ├── employee/          # Profile & designation
+    ├── attendance/        # 200m GPS geofencing & live duration timer
+    ├── sync/              # Offline-first FIFO sync engine & conflict resolution
+    ├── leave/             # Leave requests, balance limits & overlap validations
+    └── settings/          # Runtime API URL, geofence editing & location simulator
+```
+
+Each feature is divided into three isolated layers:
+* **Domain**: Pure Dart business logic, repository contracts, and entities (no Flutter or third-party dependencies).
+* **Data**: SQLite persistence (`sqflite`), remote data sources, models, and repository implementations.
+* **Presentation**: Reactive UI powered by **Riverpod** (`Notifier` / `AsyncNotifier`), handling loading, error, empty, and offline states cleanly.
+
+---
+
+## ⚡ Quick Setup (2 Minutes)
 
 ### 1. Start the Mock Server
 ```bash
@@ -14,7 +36,7 @@ node server.js
 # Running on http://localhost:3000
 ```
 
-### 2. Run the Flutter App
+### 2. Launch the Flutter App
 ```bash
 # Android Emulator (uses 10.0.2.2 loopback):
 flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:3000
@@ -23,80 +45,90 @@ flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:3000
 flutter run -d ios --dart-define=API_BASE_URL=http://localhost:3000
 ```
 
-> **Note for Physical Devices & ngrok**: You can also point the app to an ngrok tunnel (e.g. `https://xxxx.ngrok-free.app`) in the **Settings** tab at runtime without rebuilding. The app automatically handles `ngrok-skip-browser-warning`.
+> **Testing on a Physical Phone via ngrok:**  
+> Run `/Users/hadiya/.gemini/antigravity/bin/ngrok http 3000` on your computer. Open the app on your phone, go to **Settings**, tap the **`[🌐 Live ngrok Tunnel]`** preset button, and tap **Save**. The app automatically bypasses ngrok's browser warning header.
 
 ---
 
-## Key Features & Highlights
+## ✅ Completed Features
 
-- **Employee Dashboard**: Live attendance status, real-time 1-second working duration counter, profile info, leave summary, and 5 latest attendance records.
-- **200m GPS Geofence Attendance**: Haversine distance validation against the configured office coordinates (`12.971598, 77.594562`). Check-in is permitted only within 200 meters.
-- **In-App Location Simulator (Debug Testing)**: Allows reviewers on emulators or outside the office to test geofencing immediately without external GPS spoofing tools.
-- **Offline Storage & FIFO Sync Engine**:
-  - Offline check-in/out actions are saved locally in SQLite with unique client-generated UUIDv4 `eventId`s.
-  - Replays queued actions in **strict chronological sequence (FIFO)** when connectivity resumes.
-  - **Idempotency**: Retrying with the same `eventId` avoids duplicate attendance on the server.
-  - Halts the queue automatically on network timeouts or 5xx server errors to preserve action ordering.
-- **Leave Management**: Casual and Sick leave application with live validations (date range, $\ge$ 10 char reason, balance limits, overlap detection) and server 422 error mapping.
-- **Runtime Configuration & Scenario Testing**: Change backend URL, edit office geofence coordinates, and trigger mock server scenarios (`Slow`, `Timeout`, `500 Error`, `409 Conflict`, `422 Reject`) directly from the Settings screen.
-
----
-
-## Reviewer Guide: Testing the Core Requirements
-
-| Requirement | How to Test in the App |
-|---|---|
-| **1. 200m Geofence Validation** | 1. Go to **Settings** > Toggle **GPS Location Simulator** ON.<br>2. Select **At Office (0m)** $\rightarrow$ Go to Dashboard $\rightarrow$ Tap **Check In** (succeeds, live ticker starts).<br>3. Select **Outside (~280m)** $\rightarrow$ Tap **Check In** $\rightarrow$ Displays rejection: *"You are ~280m away from the office. Attendance is only permitted within 200m."* |
-| **2. Dynamic Office Coordinates** | Go to **Settings** > **Office Geofence & Policies** > Tap **Edit** to update office latitude/longitude/radius dynamically. |
-| **3. Offline Storage & Sync** | 1. Turn on Airplane mode on your device/emulator.<br>2. Tap **Check In** $\rightarrow$ Saved locally in SQLite; displays *"Saved offline. Will sync when online."* with a pending badge.<br>3. Turn off Airplane mode $\rightarrow$ Background connectivity listener detects internet and automatically syncs the event to the server. |
-| **4. Idempotency & Conflict Handling** | Go to **Settings** > Tap **409 Conflict** under Mock Server Scenarios > Tap **Force Sync Queue Now** $\rightarrow$ Rejection is handled gracefully with cascading protection. |
-| **5. Leave Date Overlap & Validation** | Go to **Leaves** tab > Tap **Apply for Leave** > Select dates overlapping an existing request or enter < 10 characters reason $\rightarrow$ Form rejects with clear inline field errors. |
+* **Dashboard & Live Work Ticker**: Shows employee details (Alex Mercer, EMP-1042), today's status, leave balance summary, and a real-time ticking timer (`00:00:00`) that continues seamlessly across app restarts.
+* **200m GPS Geofence Attendance**: Uses spherical geodesy (Haversine formula) to validate distance against company office coordinates (`12.971598, 77.594562`). Only employees within 200m can check in.
+* **In-App Location Simulator (Reviewer Tool)**: Built directly into the **Settings** tab. Allows reviewers on real phones or emulators to simulate:
+  * `At Office (0m)` — **Permitted**
+  * `Inside (~150m)` — **Permitted**
+  * `Boundary (200m)` — **Permitted**
+  * `Outside (~280m)` — **Rejected**
+  * Custom coordinates input
+* **Offline-First Synchronization Engine (Highest Priority)**:
+  * Check-ins and check-outs are immediately saved locally to SQLite with a client-generated UUIDv4 `eventId`.
+  * **FIFO Queue**: Queued events replay in strict chronological order when network returns.
+  * **Idempotency**: Server replays previously accepted `eventId`s without creating duplicate attendance rows.
+  * **Failure Isolation**: Transient network errors halt the queue to preserve sequence; permanent rejections (409/422) mark the event as rejected and cascade to dependent check-outs safely.
+  * Includes a manual **Sync Now** action and connectivity auto-triggers.
+* **Leave Management**:
+  * Apply for Casual or Sick leave with client-side & server-side validation.
+  * Enforces: start date $\ge$ today, end date $\ge$ start date, reason $\ge$ 10 chars, balance checks, and overlap detection against pending/approved requests.
+* **Interactive Settings & Scenario Testing**:
+  * Switch between `Normal`, `Slow (3s)`, `Timeout (12s)`, `500 Error`, `409 Conflict`, and `Leave 422 Reject` directly in the UI.
+  * Edit office coordinates and radius dynamically.
 
 ---
 
-## Tech Stack & Architecture
+## 📌 Assumptions Made
 
-- **Framework**: Flutter 3 (Dart 3 null-safety)
-- **Architecture**: Clean Architecture (Domain $\rightarrow$ Data $\rightarrow$ Presentation, Feature-First)
-- **State Management**: `flutter_riverpod` (v2.6) Notifiers & AsyncNotifiers
-- **Local Database**: `sqflite` (SQLite with ACID transaction support)
-- **HTTP Client**: `http` encapsulated in `ApiClient` with typed error mapping
-- **Location**: `geolocator` with injectable debug simulator fallback
-- **Backend**: Node.js & Express.js mock REST API
+1. **One Session Per Day**: Each employee has at most one check-in and one check-out per calendar day. Overnight shifts are outside current scope.
+2. **Company Timezone**: All business day calculations and midnight cutoffs strictly use the company's configured timezone (`Asia/Kolkata` / IST).
+3. **Dynamic Configuration**: The app loads office location and allowed radius dynamically from `GET /employee/me`, avoiding hardcoded coordinates.
+4. **Calendar Leave Days**: All calendar days within a leave span count as leave days (as per assessment spec).
+5. **Client UUID Ownership**: The client generates persistent UUIDv4 identifiers before any network attempt, ensuring guaranteed retry idempotency.
 
 ---
 
-## Automated Tests
+## ⚠️ Limitations & Production Considerations
 
-58 unit, widget, and domain tests covering all business rules:
+* **Background OS Termination**: Background sync while the app is killed/terminated is intentionally excluded (requires native workmanager / background fetch).
+* **Mock Server State**: The mock Node.js server maintains state in-memory during testing. Resetting or restarting the process clears stored sessions back to seed data.
+* **Production GPS Security**: In a production enterprise app, client GPS checks provide instant UX feedback, but the production server must independently re-verify coordinates and employ Play Integrity / DeviceCheck to guard against rooted/jailbroken spoofing.
+
+---
+
+## 🧪 Automated Testing
+
+All business rules, edge cases, and UI states are validated by **58 comprehensive automated tests**:
+
 ```bash
-# Run all automated tests:
+# Run test suite:
 flutter test
 
-# Run code analyzer:
+# Run static code analysis:
 flutter analyze
 ```
 
-**Key Test Coverage**:
-- `test/features/attendance/attendance_rules_test.dart`: Check-out without check-in rejection, 1 session/day rule.
-- `test/features/sync/sync_engine_test.dart`: Idempotent UUID retry, FIFO ordering, transient error queue halting.
-- `test/features/leave/leave_validator_test.dart`: Overlapping leave rejection, weekend exclusions, reason length.
-- `test/core/location_simulator_test.dart`: Geodesy offset math for 0m, 150m, 200m boundary, and 280m outside.
-- `test/widget_test.dart`: Visual state tests for banners, badges, dashboard, and settings tabs.
+* `test/features/attendance/attendance_rules_test.dart` — 1 session/day rule, check-out without check-in rejection.
+* `test/features/sync/sync_engine_test.dart` — UUID retry idempotency, FIFO order, network drop queue halting, 409 conflict cascading.
+* `test/features/leave/leave_validator_test.dart` — Date sanity, balance exhaustion, overlapping request blocking.
+* `test/core/location_simulator_test.dart` — Geodesy formulas for 0m, 150m, 200m, and 280m presets.
+* `test/widget_test.dart` — Widget rendering for badges, banners, forms, and tab switches.
 
 ---
 
-## Pre-Built APK Deliverables
+## ⏱️ Time Spent
 
-- **Debug APK** (Includes in-app Location Simulator for reviewers):
-  `build/app/outputs/flutter-apk/app-debug.apk`
-- **Release APK** (Optimized, tree-shaken, simulator compiled out):
+| Phase / Task | Time Invested |
+|---|---|
+| Project audit, geofence coordinate bug diagnosis & dynamic API config | ~2.0 hrs |
+| Offline SQLite persistence, UUID idempotency & FIFO Sync Engine | ~3.5 hrs |
+| Leave application logic, live validations & balance constraints | ~2.0 hrs |
+| Reviewer GPS location simulator, settings screen & mock scenarios | ~2.0 hrs |
+| Responsiveness fixes, automated testing (58 tests) & documentation | ~1.5 hrs |
+| **Total** | **~11.0 hrs** |
+
+---
+
+## 📦 Deliverables
+
+* **Release APK** (with Location Simulator & ngrok pre-configured):  
   `build/app/outputs/flutter-apk/app-release.apk`
-
----
-
-## Production Security Notes
-
-In a live production deployment:
-1. **Server-Side Verification**: Client GPS validation provides immediate user feedback, but the backend must independently re-compute geofencing and enforce sequence ordering.
-2. **Anti-Spoofing & Attestation**: Release builds enforce real hardware GPS (`kDebugMode` strips the simulator); production apps should also check `isMocked` flags and use Google Play Integrity / Apple DeviceCheck.
+* **Debug APK**:  
+  `build/app/outputs/flutter-apk/app-debug.apk`
