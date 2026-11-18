@@ -41,7 +41,7 @@ class LeaveScreen extends ConsumerWidget {
                   .loadLeaveData(forceRefresh: true),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
                 child: Column(
                   children: [
                     LeaveBalanceCard(
@@ -92,7 +92,7 @@ class LeaveScreen extends ConsumerWidget {
                         )
                       : ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(16.0),
+                          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
                           itemCount: leaveState.requests.length,
                           itemBuilder: (context, index) {
                             final request = leaveState.requests[index];

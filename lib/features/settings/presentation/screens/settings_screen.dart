@@ -47,12 +47,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _saveBaseUrl(String newUrl) async {
-    await ref.read(appConfigProvider.notifier).updateBaseUrl(newUrl);
-    _urlController.text = newUrl;
+    final trimmed = newUrl.trim();
+    await ref.read(appConfigProvider.notifier).updateBaseUrl(trimmed);
+    final activeConfig = ref.read(appConfigProvider);
+    _urlController.text = activeConfig.apiBaseUrl;
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('API Base URL updated to: $newUrl'),
+          content: Text(trimmed.isEmpty
+              ? 'Reset API Base URL to default: ${activeConfig.apiBaseUrl}'
+              : 'API Base URL updated to: ${activeConfig.apiBaseUrl}'),
           backgroundColor: AppTheme.statusSuccess,
         ),
       );
@@ -235,7 +239,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 80.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -265,12 +269,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   TextField(
                     controller: _urlController,
                     decoration: InputDecoration(
-                      hintText: 'http://10.0.2.2:3000',
+                      hintText: 'https://....ngrok-free.dev',
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.check_circle_outline, color: AppTheme.primaryBlue),
                         onPressed: () => _saveBaseUrl(_urlController.text),
                         tooltip: 'Save URL',
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Active: ${appConfig.apiBaseUrl}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -284,6 +297,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     runSpacing: 4,
                     children: [
                       ActionChip(
+                        avatar: const Icon(Icons.public, size: 16),
+                        label: const Text('Live ngrok Tunnel'),
+                        onPressed: () => _saveBaseUrl('https://barman-fender-hummus.ngrok-free.dev'),
+                      ),
+                      ActionChip(
                         avatar: const Icon(Icons.phone_android, size: 16),
                         label: const Text('Android (10.0.2.2:3000)'),
                         onPressed: () => _saveBaseUrl('http://10.0.2.2:3000'),
@@ -292,6 +310,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         avatar: const Icon(Icons.computer, size: 16),
                         label: const Text('Localhost (localhost:3000)'),
                         onPressed: () => _saveBaseUrl('http://localhost:3000'),
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Reset to Default'),
+                        onPressed: () => _saveBaseUrl(''),
                       ),
                     ],
                   ),

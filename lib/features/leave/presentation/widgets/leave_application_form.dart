@@ -133,16 +133,17 @@ class _LeaveApplicationFormState extends ConsumerState<LeaveApplicationForm> {
             ),
             const SizedBox(height: 6),
             SegmentedButton<LeaveType>(
+              showSelectedIcon: false,
               segments: const [
                 ButtonSegment(
                   value: LeaveType.casual,
-                  label: Text('Casual Leave'),
-                  icon: Icon(Icons.beach_access),
+                  label: Text('Casual Leave', maxLines: 1),
+                  icon: Icon(Icons.beach_access, size: 18),
                 ),
                 ButtonSegment(
                   value: LeaveType.sick,
-                  label: Text('Sick Leave'),
-                  icon: Icon(Icons.medical_services_outlined),
+                  label: Text('Sick Leave', maxLines: 1),
+                  icon: Icon(Icons.medical_services_outlined, size: 18),
                 ),
               ],
               selected: {_selectedType},
