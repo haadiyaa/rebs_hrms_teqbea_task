@@ -5,6 +5,7 @@ import '../../../../core/config/app_config.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/providers/data_providers.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/services/location_simulator.dart';
 import '../widgets/location_simulator_card.dart';
 import '../../../attendance/presentation/providers/attendance_notifier.dart';
 import '../../../employee/presentation/providers/employee_notifier.dart';
@@ -437,8 +438,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Section 2.5: GPS Location Simulator (Debug Testing Only)
-          if (kDebugMode) ...[
+          // Section 2.5: GPS Location Simulator (Debug or Reviewer Evaluation Mode)
+          if (isLocationSimulatorAllowed) ...[
             LocationSimulatorCard(appConfig: appConfig),
             const SizedBox(height: 16),
           ],

@@ -44,7 +44,7 @@ class _LocationSimulatorCardState extends ConsumerState<LocationSimulatorCard> {
 
   @override
   Widget build(BuildContext context) {
-    if (!kDebugMode) {
+    if (!isLocationSimulatorAllowed) {
       return const SizedBox.shrink();
     }
 

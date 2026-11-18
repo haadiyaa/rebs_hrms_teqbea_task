@@ -16,7 +16,7 @@ class LocationSimulatorBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!kDebugMode) {
+    if (!isLocationSimulatorAllowed) {
       return const SizedBox.shrink();
     }
 

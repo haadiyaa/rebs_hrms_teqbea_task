@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import '../config/app_config.dart';
 import '../errors/app_error.dart';
@@ -39,7 +38,7 @@ class GeolocatorLocationService implements LocationService {
 
   /// Indicates whether the location simulator is actively overriding coordinates.
   bool get isUsingSimulatedLocation =>
-      kDebugMode &&
+      isLocationSimulatorAllowed &&
       simulatorState != null &&
       simulatorState!.isEnabled &&
       simulatorState!.simulatedLatitude != null &&
@@ -47,8 +46,8 @@ class GeolocatorLocationService implements LocationService {
 
   @override
   Future<Result<LocationCoordinates>> getCurrentPosition() async {
-    // 1. Debug-only location simulator check (Active ONLY in debug mode)
-    if (kDebugMode &&
+    // 1. Location simulator check (Active in debug or when explicitly enabled for reviewer)
+    if (isLocationSimulatorAllowed &&
         simulatorState != null &&
         simulatorState!.isEnabled &&
         simulatorState!.simulatedLatitude != null &&

@@ -3,6 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/attendance/domain/utils/geofence_calculator.dart';
 
+/// Indicates whether developer/reviewer location simulation is permitted.
+/// Permitted in debug builds ([kDebugMode]) or when explicitly enabled
+/// for reviewer evaluation builds via `--dart-define=ENABLE_SIMULATOR=true`.
+const bool isLocationSimulatorAllowed =
+    kDebugMode || bool.fromEnvironment('ENABLE_SIMULATOR', defaultValue: false);
+
 /// Available presets for debug-only location simulation.
 enum LocationSimulatorPreset {
   office0m('At Office (0m)', 0.0),
@@ -78,14 +84,14 @@ class LocationSimulatorNotifier extends Notifier<LocationSimulatorState> {
     return (lat: officeLat + deltaLatDeg, lng: officeLng);
   }
 
-  /// Toggles simulated location on or off. Strictly guarded by [kDebugMode].
+  /// Toggles simulated location on or off. Strictly guarded by [isLocationSimulatorAllowed].
   void toggle(
     bool enable, {
     required double officeLat,
     required double officeLng,
   }) {
-    // SECURITY GUARD: Never allow simulator in release builds
-    if (!kDebugMode && enable) {
+    // SECURITY GUARD: Never allow simulator unless debug or explicitly permitted reviewer build
+    if (!isLocationSimulatorAllowed && enable) {
       return;
     }
 
@@ -108,8 +114,8 @@ class LocationSimulatorNotifier extends Notifier<LocationSimulatorState> {
     required double officeLat,
     required double officeLng,
   }) {
-    // SECURITY GUARD: Never allow simulator in release builds
-    if (!kDebugMode) {
+    // SECURITY GUARD: Never allow simulator unless debug or explicitly permitted reviewer build
+    if (!isLocationSimulatorAllowed) {
       return;
     }
 
@@ -152,8 +158,8 @@ class LocationSimulatorNotifier extends Notifier<LocationSimulatorState> {
     required double officeLat,
     required double officeLng,
   }) {
-    // SECURITY GUARD: Never allow simulator in release builds
-    if (!kDebugMode) {
+    // SECURITY GUARD: Never allow simulator unless debug or explicitly permitted reviewer build
+    if (!isLocationSimulatorAllowed) {
       return;
     }
 
