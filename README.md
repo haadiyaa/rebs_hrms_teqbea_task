@@ -115,14 +115,14 @@ flutter analyze
 
 ## ⏱️ Time Spent
 
-| Phase / Task | Time Invested |
-|---|---|
-| Project audit, geofence coordinate bug diagnosis & dynamic API config | ~2.0 hrs |
-| Offline SQLite persistence, UUID idempotency & FIFO Sync Engine | ~3.5 hrs |
-| Leave application logic, live validations & balance constraints | ~2.0 hrs |
-| Reviewer GPS location simulator, settings screen & mock scenarios | ~2.0 hrs |
-| Responsiveness fixes, automated testing (58 tests) & documentation | ~1.5 hrs |
-| **Total** | **~11.0 hrs** |
+* **Task Planning & System Design**: **~1.0 hr** (Yesterday, 5:30 PM – 6:30 PM)  
+  Requirement breakdown, architecture mapping, and offline sync strategy.
+* **Implementation, Testing & Refinements**: **Yesterday, 6:30 PM – Today, 1:00 PM**  
+  * Geofence coordinate bug resolution & dynamic API configuration
+  * Offline-first SQLite persistence, UUID idempotency & FIFO Sync Engine
+  * Leave application logic, live validations & balance constraints
+  * Reviewer GPS location simulator, settings screen & mock server scenarios
+  * UI responsiveness fixes, 58 automated tests (100% green), and release packaging.
 
 ---
 
