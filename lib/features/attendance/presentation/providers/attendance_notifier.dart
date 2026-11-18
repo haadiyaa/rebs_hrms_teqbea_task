@@ -48,7 +48,7 @@ class AttendanceNotifier extends Notifier<AttendanceState> {
 
   /// Loads today's attendance record and latest 5 attendance history entries.
   Future<void> loadDashboardAttendance({bool forceRefresh = false}) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(isLoading: true, clearError: true, clearUserMessage: true);
 
     // 1. Fetch today's record (merged from server cache + local pending events)
     final todayResult = await _attendanceRepository.getTodayAttendance();

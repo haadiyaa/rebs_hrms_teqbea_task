@@ -122,10 +122,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final client = ref.read(apiClientProvider);
       await client.post('/__admin/reset', body: {});
+
+      // Clear local SQLite cache and pending queue tables
+      final dbHelper = ref.read(databaseHelperProvider);
+      await dbHelper.clearAllData();
+
+      // Refresh providers so UI resets cleanly to fresh initial state
+      await ref.read(attendanceNotifierProvider.notifier).loadDashboardAttendance(forceRefresh: true);
+      await ref.read(employeeNotifierProvider.notifier).loadEmployee(forceRefresh: true);
+      await ref.read(leaveNotifierProvider.notifier).loadLeaveData(forceRefresh: true);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Mock server state reset to default'),
+            content: Text('Mock server and local data reset (ready for new check-in)'),
             backgroundColor: AppTheme.statusSuccess,
           ),
         );
