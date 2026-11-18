@@ -1,13 +1,11 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/attendance/domain/utils/geofence_calculator.dart';
 
 /// Indicates whether developer/reviewer location simulation is permitted.
-/// Permitted in debug builds ([kDebugMode]) or when explicitly enabled
-/// for reviewer evaluation builds via `--dart-define=ENABLE_SIMULATOR=true`.
-const bool isLocationSimulatorAllowed =
-    kDebugMode || bool.fromEnvironment('ENABLE_SIMULATOR', defaultValue: false);
+/// Permitted in all builds (debug, testing, and reviewer release APK) so reviewers
+/// can test the 200m geofence rules from any device.
+const bool isLocationSimulatorAllowed = true;
 
 /// Available presets for debug-only location simulation.
 enum LocationSimulatorPreset {
