@@ -126,9 +126,18 @@ flutter analyze
 
 ---
 
+## 🤖 Tooling & AI Disclosure
+
+As requested in the assessment guidelines:
+* **AI Assistance**: AI tools (Google Antigravity) were utilized as an engineering accelerator for architectural brainstorming, boilerplate generation, and generating comprehensive test case suites.
+* **Engineering Ownership**: All business logic, offline sync engine idempotency design, geofencing geodesy calculations, and Riverpod state management were designed, reviewed, debugged, and verified by the developer.
+
+---
+
 ## 📦 Deliverables
 
-* **Release APK** (with Location Simulator & ngrok pre-configured):  
-  `build/app/outputs/flutter-apk/app-release.apk`
-* **Debug APK**:  
-  `build/app/outputs/flutter-apk/app-debug.apk`
+* **Debug APK**: `deliverables/REBS_HRMS_Hadiya_Debug.apk`
+* **Release APK**: `deliverables/REBS_HRMS_Hadiya_Release.apk`
+* **Source Archive**: `deliverables/REBS_HRMS_Hadiya_Source.zip`
+* **Demo Video**: `deliverables/REBS_HRMS_Hadiya_Demo.mp4`
+
