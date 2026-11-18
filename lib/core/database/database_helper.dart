@@ -142,6 +142,18 @@ class DatabaseHelper {
     // Schema versioning & future migration hook
   }
 
+  /// Clears all cached and pending local data to reset the client state.
+  Future<void> clearAllData() async {
+    final db = await database;
+    final batch = db.batch();
+    batch.delete(AppConstants.tablePendingEvents);
+    batch.delete(AppConstants.tableCachedAttendance);
+    batch.delete(AppConstants.tableCachedEmployee);
+    batch.delete(AppConstants.tableCachedLeaveBalance);
+    batch.delete(AppConstants.tableCachedLeaveRequests);
+    await batch.commit(noResult: true);
+  }
+
   /// Closes the database connection.
   Future<void> close() async {
     if (_db != null && _db!.isOpen) {
