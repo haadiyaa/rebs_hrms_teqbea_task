@@ -31,10 +31,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.initState();
     final config = ref.read(appConfigProvider);
     _urlController = TextEditingController(text: config.apiBaseUrl);
+    _urlController.addListener(_onUrlChanged);
+  }
+
+  void _onUrlChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _urlController.removeListener(_onUrlChanged);
     _urlController.dispose();
     super.dispose();
   }
@@ -288,6 +294,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ],
                   ),
+                  if (!kIsWeb &&
+                      defaultTargetPlatform == TargetPlatform.android &&
+                      _urlController.text.contains('localhost')) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 16, color: Color(0xFFB45309)),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'On Android emulators, "localhost" refers to the emulator itself. Tap "Android (10.0.2.2:3000)" to reach the mock server on your computer.',
+                              style: TextStyle(fontSize: 11, color: Color(0xFF92400E)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerLeft,
