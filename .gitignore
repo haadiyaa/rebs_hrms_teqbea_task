@@ -71,3 +71,7 @@ ngrok.log
 
 # Widget Preview
 .widget_preview/
+
+# Output deliverables / archives
+/deliverables/
+
