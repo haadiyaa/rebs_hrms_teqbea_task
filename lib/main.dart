@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/providers/core_providers.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/clock.dart';
+import 'features/attendance/presentation/providers/attendance_notifier.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/leave/presentation/screens/leave_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
@@ -53,6 +54,14 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(locationServiceProvider).requestPermissionOnStartup();
+    });
+  }
 
   void _onDestinationSelected(int index) {
     setState(() {

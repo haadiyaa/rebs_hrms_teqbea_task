@@ -23,6 +23,7 @@ class LocationCoordinates {
 abstract interface class LocationService {
   Future<Result<LocationCoordinates>> getCurrentPosition();
   Future<bool> openAppSettings();
+  Future<void> requestPermissionOnStartup();
 }
 
 /// Production LocationService wrapping geolocator with permission handling,
@@ -35,6 +36,18 @@ class GeolocatorLocationService implements LocationService {
     required this.appConfig,
     this.simulatorState,
   });
+
+  @override
+  Future<void> requestPermissionOnStartup() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      }
+    } catch (_) {
+      // Ignored on startup if platform channel unavailable
+    }
+  }
 
   /// Indicates whether the location simulator is actively overriding coordinates.
   bool get isUsingSimulatedLocation =>
